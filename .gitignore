@@ -1,3 +1,9 @@
+# Project gitignores
+boilerkey_config.json
+boilerkey_counter.json
+config.toml
+
+# Python specific gitignores
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
