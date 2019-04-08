@@ -1,0 +1,54 @@
+
+# In case you do not want to attempt automatic registration
+# boilerkey setup is not required if this is true
+# reg_pin is not required if this is true
+track_only = true
+
+# Purdue Username
+username = ""
+
+# Boilerkey configs
+# Do not change if you do not know what these are!
+boilerkey_config_path = "boilerkey_config.json"
+boilerkey_counter_path = "boilerkey_counter.json"
+
+# Term id
+# Examples:
+#   201910 - Fall 2018
+#   201920 - Spring 2019
+#   201930 - Summer 2019
+#   202010 - Fall 2019
+#   202020 - Spring 2020
+#   202030 - Summer 2020
+semester_id = "202010"
+
+# Registration pin
+reg_pin = "0000000"
+
+# No matter what, the script will exit once it reached this number of tries.
+# This is to prevent infinite loops, and make sure that the global registration
+# limit is not reached
+max_registration_tries = 5
+
+# Update frequency in seconds
+update_freq = 5
+
+# IT IS UP TO YOU TO MAKE SURE THAT THESE ARE VALID
+# DOUBLE CHECK THE PREREQS
+# These CRNs will be tracked. Make sure to put connected CRNs together.
+# Example:
+#   I am taking CS 354 and it has a lecture and a pso. 
+#   Lecture CRN - 13241
+#   PSO CRN - 11404
+#
+#   I am also taking CS 473
+#   Lecture CRN - 12510
+# 
+#   The structure will look like this:
+#   tracked_crns = [
+#       [12510],
+#       [13241, 11404]
+#   ]
+tracked_crns = [
+    
+]

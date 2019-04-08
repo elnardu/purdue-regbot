@@ -1,15 +1,28 @@
-import requests
-from bs4 import BeautifulSoup
-from boilerkey import generatePassword
-
 import time
 
+import requests
+from bs4 import BeautifulSoup
+from ratelimit import limits, RateLimitException
+from backoff import on_exception, expo
+
+from .boilerkey import BoilerKey
+
 USER_AGENT = "Mozilla/5.0 (compatible; MSIE 10.0; Macintosh; Intel Mac OS X 10_7_3; Trident/6.0)"
+ERROR_MESSAGE = "We are sorry, but the site has received too many requests. Please try again later."
+
+from loguru import logger
+
+
+# class RateLimitException(Exception):
+#     pass
+
 
 class PurdueApi():
-    def __init__(self, username=None):
+
+    def __init__(self, username=None, boilerkey=None):
         self.username = username
         self.session = requests.Session()
+        self.boilerkey = boilerkey
 
     def _auth(self):
         assert self.username
@@ -33,7 +46,7 @@ class PurdueApi():
             "execution": "e1s1",
             "_eventId": "submit",
             "lt": ltParam,
-            "password": generatePassword(),
+            "password": self.boilerkey.generate_password(),
             "submit": "Login",
             "username": self.username
         }
@@ -41,8 +54,9 @@ class PurdueApi():
         self.session.post(
             "https://www.purdue.edu/apps/account/cas/login", data=data)
 
-    @classmethod
-    def getSectionDataByCRN(cls, term, crn):
+    @on_exception(expo, RateLimitException)
+    @limits(calls=1, period=5)
+    def getSectionDataByCRN(self, term, crn):
         res = requests.get(
             "https://selfservice.mypurdue.purdue.edu/prod/bwckschd.p_disp_detail_sched",
             headers={
@@ -53,7 +67,11 @@ class PurdueApi():
                 "crn_in": crn
             }
         )
-        # print(res.text)
+
+        if ERROR_MESSAGE in res.text:
+            # logger.warn("Too many requests to purdue class api. Retrying..")
+            raise RateLimitException("", 1)
+
         bsdoc = BeautifulSoup(res.text, "html.parser")
 
         courseTitle = bsdoc.find(
@@ -65,17 +83,6 @@ class PurdueApi():
         availSeats = availTable[1].find_all("td")
         availWaitlistSeats = availTable[2].find_all("td")
 
-        availability = {
-            "seats_capacity": int(availSeats[0].get_text()),
-            "seats_actual": int(availSeats[1].get_text()),
-            "seats_remaining": int(availSeats[2].get_text()),
-
-            "waitlistseats_capacity": int(availWaitlistSeats[0].get_text()),
-            "waitlistseats_actual": int(availWaitlistSeats[1].get_text()),
-            "waitlistseats_remaining": int(availWaitlistSeats[2].get_text())
-        }
-        print(availability)
-
         restrictions = str(bsdoc.find(
             "td", {"class": "dddefault"}).contents[-1])
         si = restrictions.find(
@@ -84,10 +91,24 @@ class PurdueApi():
         fi = restrictions.find('<span', si)
         restrictions = restrictions[si:fi].replace(
             "\n", "").replace("<br/>", "\n").strip()
-        # print(restrictions)
 
-    @classmethod
-    def getClassDataByNumber(cls, term, subjectCode, number):
+        course_struct = {
+            "title": courseTitle,
+            "restrictions": restrictions,
+            "crn": crn,
+
+            "seats_capacity": int(availSeats[0].get_text()),
+            "seats_actual": int(availSeats[1].get_text()),
+            "seats_remaining": int(availSeats[2].get_text()),
+
+            "waitlistseats_capacity": int(availWaitlistSeats[0].get_text()),
+            "waitlistseats_actual": int(availWaitlistSeats[1].get_text()),
+            "waitlistseats_remaining": int(availWaitlistSeats[2].get_text())
+        }
+
+        return course_struct
+
+    def getClassDataByNumber(self, term, subjectCode, number):
         res = requests.get(
             "https://selfservice.mypurdue.purdue.edu/prod/bwckctlg.p_display_courses",
             headers={
@@ -111,8 +132,3 @@ class PurdueApi():
 
         print(res.text)
 
-
-if __name__ == "__main__":
-    # pa = PurdueApi("eutiushe")
-    PurdueApi.getSectionDataByCRN("201920", "36593")
-    # PurdueApi.getClassDataByNumber("201920", "CS", "37300")

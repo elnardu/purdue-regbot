@@ -2,6 +2,7 @@
 boilerkey_config.json
 boilerkey_counter.json
 config.toml
+.vscode/
 
 # Python specific gitignores
 # Byte-compiled / optimized / DLL files
